@@ -2,8 +2,11 @@ import os
 import flask
 import json
 import sys
+from typing import Generic ,TypeVar
 from flask import request
 from flask import Flask
+
+
 
 
 class AppController:
@@ -45,6 +48,8 @@ class AppController:
 
         self.webprovider= WebProvider.Get()
 
+        self.dataprovider=DataProvider.Get()
+
         self._authcator=AuthenProvider.GetAuthencator(self)
 
         self.webprovider.run(host="0.0.0.0",port=int(self._config['port']))
@@ -66,6 +71,7 @@ class AuthcatorBase:
 class FlaskAuthcator(AuthcatorBase):
 
     def __init__(self,controller,param=None):
+        #没有做输入检测
         app=controller.webprovider
         @app.route('/')
         def VerifyUser():
@@ -81,6 +87,8 @@ class FlaskAuthcator(AuthcatorBase):
             uname=request.form['input_name']
             if uname == None:
                 return 400
+            elif uname not in controller.dataprovider.GetData('Users'):
+                return '<p>非法用户，登录失败 </p>'
             return '<p>登录成功,欢迎你'+uname+'</p>'
 
 
@@ -95,7 +103,26 @@ class WebProvider:
 
         return WebProvider._Instance
 
+class DataProvider:
+    _Instance=None
+    @staticmethod
+    def Get():
+        if DataProvider._Instance is None:
+            DataProvider._Instance=DataProvider()
 
+        return DataProvider._Instance
+
+    def __init__(self):
+        self._users = ['liuchanghe','wanglonglong']
+
+        self._data = {'Users':lambda: self._GetUsers()}
+
+
+    def GetData(self,key):
+        return self._data['Users']()
+
+    def _GetUsers(self):
+        return self._users
 
 if len(sys.argv) == 1:
     controller=AppController.Get(None)
