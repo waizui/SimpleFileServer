@@ -3,7 +3,7 @@ import flask
 import json
 import sys
 from typing import Generic ,TypeVar
-from flask import request
+from flask import request,session,redirect,url_for
 from flask import Flask
 
 
@@ -12,8 +12,9 @@ from flask import Flask
 class AppController:
     defalutconfig={
         'port':5000,
-        'timeout':100,
-        'authenmethod':'name'
+        'session_timeout':7200,
+        'authenmethod':'name',
+        'secret_key':'secretkey',
     }
 
     defalutconfpath='/appconfig.json'
@@ -56,7 +57,7 @@ class AppController:
 
 
 
-'''由flask提供验证器'''
+#provider by flask
 class AuthenProvider:
     @staticmethod
     def GetAuthencator(controller):
@@ -71,8 +72,11 @@ class AuthcatorBase:
 class FlaskAuthcator(AuthcatorBase):
 
     def __init__(self,controller,param=None):
-        #没有做输入检测
+        #TODO:input check
         app=controller.webprovider
+        app.config['SECRET_KEY']=controller._config['secret_key']
+        app.config['PERMANENT_SESSION_LIFETIME']=controller._config['session_timeout']
+
         @app.route('/')
         def VerifyUser():
             return '<p>输入账号 </p>'\
@@ -89,10 +93,17 @@ class FlaskAuthcator(AuthcatorBase):
                 return 400
             elif uname not in controller.dataprovider.GetData('Users'):
                 return '<p>非法用户，登录失败 </p>'
-            return '<p>登录成功,欢迎你'+uname+'</p>'
+
+            session['username']=uname
+            return redirect(url_for('FileBrowser'))
 
 
-'''web服务提供器暂时用flask'''
+        @app.route('/filelist',methods=['Get','Post'])
+        def FileBrowser():
+            if session.get('username') is None:
+                return  redirect(url_for('VerifyUser'))
+            return 'test'
+
 class WebProvider:
     _Instance=None
 
